@@ -1,40 +1,38 @@
-﻿using System;
-using System.Web.Http;
+using System;
+using Microsoft.AspNetCore.Mvc;
 using ProductsWebAPI.Models;
 using ProductsWebAPI.Service;
 
-
 namespace ProductsWebAPI.Controllers
 {
-    public class ProductsController : ApiController
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ProductsController : ControllerBase
     {
-
         private readonly IProductsService _productsService;
+
         public ProductsController(IProductsService productsService)
         {
             _productsService = productsService ?? throw new ArgumentNullException(nameof(productsService));
         }
 
-
-        [Route("api/products")]
         [HttpGet]
-        public IHttpActionResult ListProducts()
+        public IActionResult ListProducts()
         {
             try
             {
                 var products = _productsService.GetAllProducts();
                 return Ok(products);
             }
-            catch (Exception ex) {
-                return InternalServerError(ex);
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
             }
         }
 
-        [Route("api/products/{id:int}")]
-        [HttpGet]
-        public IHttpActionResult GetProduct(int id)
+        [HttpGet("{id:int}")]
+        public IActionResult GetProduct(int id)
         {
-            //Validation
             if (id <= 0)
             {
                 return BadRequest("Invalid product ID. ID must be greater than 0.");
@@ -51,17 +49,13 @@ namespace ProductsWebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return InternalServerError(ex);
+                return StatusCode(500, ex.Message);
             }
-
         }
 
-        // POST api/product
-        [Route("api/products")]
         [HttpPost]
-        public IHttpActionResult CreateProduct([FromBody] Product value)
+        public IActionResult CreateProduct([FromBody] Product value)
         {
-            //Validation
             if (value == null)
             {
                 return BadRequest("Product data cannot be null");
@@ -70,22 +64,17 @@ namespace ProductsWebAPI.Controllers
             try
             {
                 _productsService.SaveProduct(value);
-                return Created($"api/products/{value.Id}", value);
+                return CreatedAtAction(nameof(GetProduct), new { id = value.Id }, value);
             }
             catch (Exception ex)
             {
-                return InternalServerError(ex);
+                return StatusCode(500, ex.Message);
             }
-
         }
 
-        // PUT api/product/5
-
-        [Route("api/products/{id:int}")]
-        [HttpPut]
-        public IHttpActionResult UpdateProduct(int id, [FromBody] Product newValue)
+        [HttpPut("{id:int}")]
+        public IActionResult UpdateProduct(int id, [FromBody] Product newValue)
         {
-            //Validation
             if (id <= 0)
             {
                 return BadRequest("Invalid product ID. ID must be greater than 0.");
@@ -98,7 +87,6 @@ namespace ProductsWebAPI.Controllers
 
             try
             {
-                //Check for existing product before update
                 var existingProduct = _productsService.GetProduct(id);
                 if (existingProduct == null)
                 {
@@ -110,17 +98,13 @@ namespace ProductsWebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return InternalServerError(ex);
+                return StatusCode(500, ex.Message);
             }
-
         }
 
-        // DELETE api/products/5
-        [Route("api/products/{id:int}")]
-        [HttpDelete]
-        public IHttpActionResult DeleteProduct(int id)
+        [HttpDelete("{id:int}")]
+        public IActionResult DeleteProduct(int id)
         {
-            //Validation
             if (id <= 0)
             {
                 return BadRequest("Invalid product ID. ID must be greater than 0.");
@@ -133,8 +117,9 @@ namespace ProductsWebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return InternalServerError(ex);
+                return StatusCode(500, ex.Message);
             }
         }
     }
 }
+

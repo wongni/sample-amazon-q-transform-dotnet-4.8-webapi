@@ -7,85 +7,49 @@ namespace ProductsWebAPI.Service
 {
     public class ProductsService : IProductsService
     {
-        public ProductsService() { }
+        private readonly ProductsContext _context;
 
-        //Implement interface definitions
-        public IEnumerable<Product> GetAllProducts()
+        public ProductsService(ProductsContext context)
         {
-            //return products;
-            using (var db = new ProductsContext())
-            {
-                return db.Products.ToArray();
-            }
-
-
+            _context = context;
         }
 
-        public Product GetProduct(int id)
+        public IEnumerable<Product> GetAllProducts()
         {
-            using (var db = new ProductsContext())
-            {
-                Product query = (from p in db.Products
-                                 where p.Id == id
-                                 select p).FirstOrDefault();
+            return _context.Products.ToArray();
+        }
 
-                if (query == null)
-                {
-                    return null;
-                }
-
-                return query;
-            }
+        public Product? GetProduct(int id)
+        {
+            return _context.Products.FirstOrDefault(p => p.Id == id);
         }
 
         public void SaveProduct(Product product)
         {
-            using (var db = new ProductsContext())
-            {
-                db.Products.Add(product);
-                db.SaveChanges();
-            }
+            _context.Products.Add(product);
+            _context.SaveChanges();
         }
 
         public void DeleteProduct(int id)
         {
-            using (var db = new ProductsContext())
+            var product = _context.Products.FirstOrDefault(p => p.Id == id);
+            if (product != null)
             {
-                Product value = (from p in db.Products
-                                 where p.Id == id
-                                 select p).FirstOrDefault();
-
-                if (value == null)
-                {
-                    return;
-                }
-
-                db.Products.Remove(value);
-                db.SaveChanges();
+                _context.Products.Remove(product);
+                _context.SaveChanges();
             }
         }
 
         public void UpdateProduct(int id, Product product)
         {
-            using (var db = new ProductsContext())
+            var existing = _context.Products.FirstOrDefault(p => p.Id == id);
+            if (existing != null)
             {
-                Product value = (from p in db.Products
-                                 where p.Id == id
-                                 select p).FirstOrDefault();
-
-                if (value == null)
-                {
-                    return;
-                }
-
-                value.Name = product.Name;
-                value.Price = product.Price;
-                value.Category = product.Category;
-
-                db.SaveChanges();
+                existing.Name = product.Name;
+                existing.Price = product.Price;
+                existing.Category = product.Category;
+                _context.SaveChanges();
             }
         }
-
-
     }
 }
