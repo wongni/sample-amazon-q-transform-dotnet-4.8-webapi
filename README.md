@@ -1,43 +1,208 @@
-# ProductsWebAPI
+# Products Web API - Modernized for ECS
 
-## Getting started
+This application has been migrated from .NET Framework 4.8 Web API to ASP.NET Core 10.0 for containerized deployment on AWS ECS.
 
-A sample .Net 4.8 Web API solution. The solution offers CRUD functionalities around Products.
+## Migration Summary
 
-## Description
-This project will be used as the sample .Net 4.8 WebAPI solution. The solution will be transformed using Amazon Q Developer Transform capability (QCT.Net).
-See the link for more details: https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/transform-dotnet-IDE.html
+**Original Stack:**
+- .NET Framework 4.8
+- ASP.NET Web API 2
+- Entity Framework 6.5.1
+- SimpleInjector DI
+- LocalDB
 
-The WebAPI solution has Read, Create, Update, Delete API functionalities around a fictitious product system of records (SOR). The solution uses Entity Framework and local MS SQL database for the Product data source.
-Run the solution in local and use any test client to hit the API endpoints. We have a sample web page index.html to hit the endpoints. 
-The test project has test methods for the controller. 
+**Modernized Stack:**
+- ASP.NET Core 10.0
+- EF Core 10.0
+- Built-in Dependency Injection
+- SQL Server (containerized)
+- Swagger/OpenAPI documentation
 
-## Installation
-Run Clean Solution and Build to build the solution. Hit F5 or Start Debugging to run the solution.
+## Key Changes
 
-## Test 
-The ProductsWebAPITest has test methods for the Controller class. Use Visual Studio Test Explorer to run the unit tests.
+- Converted to SDK-style project format
+- Migrated from `IHttpActionResult` to `IActionResult`
+- Updated Entity Framework 6 to EF Core 10
+- Replaced SimpleInjector with built-in DI
+- Added Swagger/OpenAPI support
+- Configured for port 8080 (ECS standard)
+- Added health check endpoint
+- Updated all tests to MSTest 3.6.3
 
-## Usage
-The application will be used as a sample .Net 4.8 solution that will be transformed using Amazon Q Transform capabilities into .Net Core 8.0. The solution should be used as a sample proof-of-concept only and not meant to be used for Production.
-Please follow security best practices before deploying any solution to Production.
+## API Endpoints
 
-## Support
-Create an issue to the github for any questions, support.
+- `GET /api/products` - List all products
+- `GET /api/products/{id}` - Get single product
+- `POST /api/products` - Create product
+- `PUT /api/products/{id}` - Update product
+- `DELETE /api/products/{id}` - Delete product
+- `GET /health` - Health check
+- `GET /swagger` - Swagger UI
 
-## Authors and acknowledgment
+## Local Development
 
-### Rajdeep Banerjee: 
-Rajdeep Banerjee is a Senior Partner Solutions Architect at AWS helping strategic partners and clients in the AWS cloud migration and digital transformation journey. Rajdeep focuses on working with partners to provide technical guidance on AWS, collaborate with them to understand their technical requirements, and designing solutions to meet their specific needs. He is a member of Serverless technical field community. Rajdeep is based out of Richmond, Virginia.
+### Prerequisites
+- .NET SDK 10.0+
+- Docker Desktop
+- SQL Server (or use Docker)
 
-### Lavanya Tangutur: 
-Lavanya Tangutur serves as a Senior Technical Account Manager at Amazon Web Services (AWS) focused on helping customers build, deploy, and run secure, resilient, and cost-effective workloads on AWS. She combines her passion for coding with customer engagements to implement AWS best practices and solutions.
+### Run with Docker
 
-## Security
+```bash
+# Start SQL Server
+docker run -d --name sqlserver \
+  -e "ACCEPT_EULA=Y" \
+  -e "SA_PASSWORD=YourStrong@Passw0rd" \
+  -p 1433:1433 \
+  mcr.microsoft.com/mssql/server:2022-latest
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+# Apply migrations
+cd ProductsWebAPI
+dotnet ef database update
+
+# Build and run API
+docker build -t products-api .
+docker run -d -p 8080:8080 \
+  -e "ConnectionStrings__ProductsContext=Server=host.docker.internal,1433;Database=ProductsContext;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;" \
+  products-api
+```
+
+### Run Tests
+
+```bash
+cd ProductsWebAPITest
+dotnet test
+```
+
+## Environment Variables
+
+The application uses ASP.NET Core configuration binding with double underscore notation for nested settings:
+
+```bash
+# Connection string format
+ConnectionStrings__ProductsContext="Server=<host>,1433;Database=ProductsContext;User Id=<user>;Password=<password>;TrustServerCertificate=True;"
+
+# Example for ECS
+ConnectionStrings__ProductsContext="Server=mydb.abc123.us-east-1.rds.amazonaws.com,1433;Database=ProductsContext;User Id=admin;Password=<password>;TrustServerCertificate=True;"
+```
+
+## Database Migrations
+
+EF Core migrations are included in the `Migrations/` folder. To apply:
+
+```bash
+# Local
+dotnet ef database update
+
+# In ECS (run as init container or startup task)
+dotnet ef database update --connection "Server=<rds-endpoint>,1433;..."
+```
+
+## AWS ECS Deployment
+
+### 1. Push Image to ECR
+
+```bash
+# Authenticate to ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
+
+# Tag and push
+docker tag products-api:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/products-api:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/products-api:latest
+```
+
+### 2. Create RDS SQL Server Instance
+
+- Engine: Microsoft SQL Server
+- Version: SQL Server 2022
+- Instance class: db.t3.small (or larger)
+- Storage: 20 GB minimum
+- Enable automatic backups
+- Note the endpoint and credentials
+
+### 3. ECS Task Definition
+
+```json
+{
+  "family": "products-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "products-api",
+      "image": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/products-api:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "ConnectionStrings__ProductsContext",
+          "value": "Server=<rds-endpoint>,1433;Database=ProductsContext;User Id=admin;Password=<password>;TrustServerCertificate=True;"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/products-api",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+```
+
+### 4. ECS Service Configuration
+
+- Launch type: Fargate
+- Platform version: Latest
+- Desired tasks: 2 (for high availability)
+- Load balancer: Application Load Balancer
+- Target group: Port 8080, health check path `/health`
+- Auto-scaling: Target tracking (CPU 70%)
+
+### 5. Security Groups
+
+**ECS Tasks:**
+- Inbound: Port 8080 from ALB security group
+- Outbound: Port 1433 to RDS security group
+
+**RDS:**
+- Inbound: Port 1433 from ECS security group
+
+## OpenAPI/Swagger
+
+Swagger UI is available at `/swagger` in all environments. The OpenAPI specification is at `/swagger/v1/swagger.json`.
+
+## Validation Results
+
+✅ All 11 unit tests passed  
+✅ Docker build successful  
+✅ Health check endpoint working  
+✅ Swagger/OpenAPI accessible  
+✅ GET /api/products - Success  
+✅ POST /api/products - Success  
+✅ GET /api/products/{id} - Success  
+✅ PUT /api/products/{id} - Success  
+✅ DELETE /api/products/{id} - Success  
+
+## Migration Date
+
+Migrated on: December 1, 2025
 
 ## License
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
-
+See LICENSE file for details.
