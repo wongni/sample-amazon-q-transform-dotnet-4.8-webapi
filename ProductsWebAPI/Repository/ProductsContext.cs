@@ -1,12 +1,10 @@
-﻿using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
 using ProductsWebAPI.Models;
 
-namespace ProductsWebAPI.Repository
+namespace ProductsWebAPI.Repository;
+
+public class ProductsContext : DbContext
 {
-    public class ProductsContext : DbContext
-    {
-        public DbSet<Product> Products { get; set; }
-    }
-
-
+    public ProductsContext(DbContextOptions<ProductsContext> options) : base(options) { }
+    public DbSet<Product> Products { get; set; }
 }
