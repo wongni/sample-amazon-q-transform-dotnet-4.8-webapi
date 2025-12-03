@@ -1,0 +1,22 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET Core
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# Backup files
+*.backup.*
