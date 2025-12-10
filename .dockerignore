@@ -1,0 +1,90 @@
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+**/out/
+
+# NuGet packages
+**/.nuget/
+**/packages/
+*.nupkg
+
+# Test results and coverage
+**/TestResults/
+**/coverage/
+**/*.trx
+**/*.coverage
+
+# IDE files
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+**/*.swp
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+.gitmodules
+
+# Documentation
+*.md
+**/docs/
+README*
+LICENSE*
+CONTRIBUTING*
+CODE_OF_CONDUCT*
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+.circleci/
+.travis.yml
+Jenkinsfile
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temp files
+**/*.log
+**/*.tmp
+**/temp/
+**/logs/
+
+# Development databases
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Local configuration
+**/appsettings.Development.json
+**/launchSettings.json
+
+# Secrets and keys
+**/*.pfx
+**/*.key
+**/*.p12
+**/secrets.json
+**/.env
+**/.env.*
+
+# Test projects
+**/*Test/
+**/*Tests/
+**/*.Test/
+**/*.Tests/
+
+# Q Tools
+.qtools/
