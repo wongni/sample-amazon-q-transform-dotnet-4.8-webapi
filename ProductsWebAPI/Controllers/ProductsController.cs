@@ -1,140 +1,107 @@
-﻿using System;
-using System.Web.Http;
+using Microsoft.AspNetCore.Mvc;
 using ProductsWebAPI.Models;
 using ProductsWebAPI.Service;
 
+namespace ProductsWebAPI.Controllers;
 
-namespace ProductsWebAPI.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class ProductsController : ControllerBase
 {
-    public class ProductsController : ApiController
+    private readonly IProductsService _productsService;
+    
+    public ProductsController(IProductsService productsService)
     {
+        _productsService = productsService ?? throw new ArgumentNullException(nameof(productsService));
+    }
 
-        private readonly IProductsService _productsService;
-        public ProductsController(IProductsService productsService)
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Product>>> ListProducts()
+    {
+        try
         {
-            _productsService = productsService ?? throw new ArgumentNullException(nameof(productsService));
+            var products = await _productsService.GetAllProductsAsync();
+            return Ok(products);
         }
-
-
-        [Route("api/products")]
-        [HttpGet]
-        public IHttpActionResult ListProducts()
+        catch (Exception ex)
         {
-            try
-            {
-                var products = _productsService.GetAllProducts();
-                return Ok(products);
-            }
-            catch (Exception ex) {
-                return InternalServerError(ex);
-            }
+            return StatusCode(500, ex.Message);
         }
+    }
 
-        [Route("api/products/{id:int}")]
-        [HttpGet]
-        public IHttpActionResult GetProduct(int id)
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<Product>> GetProduct(int id)
+    {
+        if (id <= 0)
+            return BadRequest("Invalid product ID. ID must be greater than 0.");
+
+        try
         {
-            //Validation
-            if (id <= 0)
-            {
-                return BadRequest("Invalid product ID. ID must be greater than 0.");
-            }
-
-            try
-            {
-                var product = _productsService.GetProduct(id);
-                if (product == null)
-                {
-                    return NotFound();
-                }
-                return Ok(product);
-            }
-            catch (Exception ex)
-            {
-                return InternalServerError(ex);
-            }
-
+            var product = await _productsService.GetProductAsync(id);
+            return product is null ? NotFound() : Ok(product);
         }
-
-        // POST api/product
-        [Route("api/products")]
-        [HttpPost]
-        public IHttpActionResult CreateProduct([FromBody] Product value)
+        catch (Exception ex)
         {
-            //Validation
-            if (value == null)
-            {
-                return BadRequest("Product data cannot be null");
-            }
-
-            try
-            {
-                _productsService.SaveProduct(value);
-                return Created($"api/products/{value.Id}", value);
-            }
-            catch (Exception ex)
-            {
-                return InternalServerError(ex);
-            }
-
+            return StatusCode(500, ex.Message);
         }
+    }
 
-        // PUT api/product/5
+    [HttpPost]
+    public async Task<ActionResult<Product>> CreateProduct([FromBody] Product value)
+    {
+        if (value is null)
+            return BadRequest("Product data cannot be null");
 
-        [Route("api/products/{id:int}")]
-        [HttpPut]
-        public IHttpActionResult UpdateProduct(int id, [FromBody] Product newValue)
+        try
         {
-            //Validation
-            if (id <= 0)
-            {
-                return BadRequest("Invalid product ID. ID must be greater than 0.");
-            }
-
-            if (newValue == null)
-            {
-                return BadRequest("Product data cannot be null");
-            }
-
-            try
-            {
-                //Check for existing product before update
-                var existingProduct = _productsService.GetProduct(id);
-                if (existingProduct == null)
-                {
-                    return NotFound();
-                }
-
-                _productsService.UpdateProduct(id, newValue);
-                return Ok(newValue);
-            }
-            catch (Exception ex)
-            {
-                return InternalServerError(ex);
-            }
-
+            await _productsService.SaveProductAsync(value);
+            return CreatedAtAction(nameof(GetProduct), new { id = value.Id }, value);
         }
-
-        // DELETE api/products/5
-        [Route("api/products/{id:int}")]
-        [HttpDelete]
-        public IHttpActionResult DeleteProduct(int id)
+        catch (Exception ex)
         {
-            //Validation
-            if (id <= 0)
-            {
-                return BadRequest("Invalid product ID. ID must be greater than 0.");
-            }
+            return StatusCode(500, ex.Message);
+        }
+    }
 
-            try
-            {
-                _productsService.DeleteProduct(id);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return InternalServerError(ex);
-            }
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<Product>> UpdateProduct(int id, [FromBody] Product newValue)
+    {
+        if (id <= 0)
+            return BadRequest("Invalid product ID. ID must be greater than 0.");
+
+        if (newValue is null)
+            return BadRequest("Product data cannot be null");
+
+        try
+        {
+            var existingProduct = await _productsService.GetProductAsync(id);
+            if (existingProduct is null)
+                return NotFound();
+
+            await _productsService.UpdateProductAsync(id, newValue);
+            return Ok(newValue);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteProduct(int id)
+    {
+        if (id <= 0)
+            return BadRequest("Invalid product ID. ID must be greater than 0.");
+
+        try
+        {
+            await _productsService.DeleteProductAsync(id);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
         }
     }
 }
+

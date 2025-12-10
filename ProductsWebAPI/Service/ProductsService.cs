@@ -1,91 +1,54 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using ProductsWebAPI.Models;
 using ProductsWebAPI.Repository;
 
-namespace ProductsWebAPI.Service
+namespace ProductsWebAPI.Service;
+
+public class ProductsService : IProductsService
 {
-    public class ProductsService : IProductsService
+    private readonly ProductsContext _context;
+    
+    public ProductsService(ProductsContext context)
     {
-        public ProductsService() { }
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+    }
+    
+    public async Task<IEnumerable<Product>> GetAllProductsAsync()
+    {
+        return await _context.Products.ToArrayAsync();
+    }
 
-        //Implement interface definitions
-        public IEnumerable<Product> GetAllProducts()
-        {
-            //return products;
-            using (var db = new ProductsContext())
-            {
-                return db.Products.ToArray();
-            }
+    public async Task<Product?> GetProductAsync(int id)
+    {
+        return await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+    }
 
+    public async Task SaveProductAsync(Product product)
+    {
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+    }
 
-        }
+    public async Task DeleteProductAsync(int id)
+    {
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+        if (product is null)
+            return;
 
-        public Product GetProduct(int id)
-        {
-            using (var db = new ProductsContext())
-            {
-                Product query = (from p in db.Products
-                                 where p.Id == id
-                                 select p).FirstOrDefault();
+        _context.Products.Remove(product);
+        await _context.SaveChangesAsync();
+    }
 
-                if (query == null)
-                {
-                    return null;
-                }
+    public async Task UpdateProductAsync(int id, Product product)
+    {
+        var existingProduct = await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+        if (existingProduct is null)
+            return;
 
-                return query;
-            }
-        }
+        existingProduct.Name = product.Name;
+        existingProduct.Price = product.Price;
+        existingProduct.Category = product.Category;
 
-        public void SaveProduct(Product product)
-        {
-            using (var db = new ProductsContext())
-            {
-                db.Products.Add(product);
-                db.SaveChanges();
-            }
-        }
-
-        public void DeleteProduct(int id)
-        {
-            using (var db = new ProductsContext())
-            {
-                Product value = (from p in db.Products
-                                 where p.Id == id
-                                 select p).FirstOrDefault();
-
-                if (value == null)
-                {
-                    return;
-                }
-
-                db.Products.Remove(value);
-                db.SaveChanges();
-            }
-        }
-
-        public void UpdateProduct(int id, Product product)
-        {
-            using (var db = new ProductsContext())
-            {
-                Product value = (from p in db.Products
-                                 where p.Id == id
-                                 select p).FirstOrDefault();
-
-                if (value == null)
-                {
-                    return;
-                }
-
-                value.Name = product.Name;
-                value.Price = product.Price;
-                value.Category = product.Category;
-
-                db.SaveChanges();
-            }
-        }
-
-
+        await _context.SaveChangesAsync();
     }
 }

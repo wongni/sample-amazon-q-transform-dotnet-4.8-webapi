@@ -1,16 +1,13 @@
-﻿using System.Collections.Generic;
 using ProductsWebAPI.Models;
 
-namespace ProductsWebAPI.Service
+namespace ProductsWebAPI.Service;
+
+public interface IProductsService
 {
-    public interface IProductsService
-    {
-        IEnumerable<Product> GetAllProducts();
-        Product GetProduct(int id);
-
-        void SaveProduct(Product product);
-        void DeleteProduct(int id);
-        void UpdateProduct(int id, Product product);
-
-    }
+    Task<IEnumerable<Product>> GetAllProductsAsync();
+    Task<Product?> GetProductAsync(int id);
+    Task SaveProductAsync(Product product);
+    Task DeleteProductAsync(int id);
+    Task UpdateProductAsync(int id, Product product);
 }
+
